@@ -78,7 +78,7 @@ st.markdown("""
     /* 헤더 전체 Wrapper - 헤더+버튼을 묶는 컨테이너 */
     .header-wrapper {
         position: fixed;
-        top: 0;
+        top: 50px;
         left: 0;
         right: 0;
         background-color: white;
@@ -114,7 +114,7 @@ st.markdown("""
     /* 헤더 내부 버튼 컨테이너 - fixed 위치 (헤더 높이 + 84px, 우측) */
     .st-key-scheduler-toggle-btn {
         position: fixed;
-        top: calc(1rem + 1.5rem + 1rem + 0.3rem + 0.8rem + 1rem + 84px);
+        top: calc(50px + 1rem + 1.5rem + 1rem + 0.3rem + 0.8rem + 1rem + 84px);
         right: 3rem;
         z-index: 1001;
         margin: 0 !important;
