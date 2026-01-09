@@ -1,5 +1,6 @@
 import os
 import json
+import uuid
 from datetime import datetime
 import streamlit as st
 from openai import OpenAI
@@ -46,20 +47,57 @@ if "scheduler_restored" not in st.session_state:
 # Streamlit 설정 및 상태
 # =========================
 st.set_page_config(page_title="Chatbot + News + Notion", layout="wide")
-CHAT_HISTORY_FILE = "chat_history.json"
+CHAT_HISTORY_DIR = "chat_sessions"
 
-def load_chat_history():
-    if os.path.exists(CHAT_HISTORY_FILE):
-        with open(CHAT_HISTORY_FILE, "r", encoding="utf-8") as f:
+# 세션 디렉토리 생성
+if not os.path.exists(CHAT_HISTORY_DIR):
+    os.makedirs(CHAT_HISTORY_DIR)
+
+def get_session_file(session_id):
+    """세션 ID에 해당하는 파일 경로 반환"""
+    return os.path.join(CHAT_HISTORY_DIR, f"chat_history_{session_id}.json")
+
+def load_chat_history(session_id):
+    """특정 세션의 채팅 이력 불러오기"""
+    session_file = get_session_file(session_id)
+    if os.path.exists(session_file):
+        with open(session_file, "r", encoding="utf-8") as f:
             return json.load(f)
     return []
 
-def save_chat_history(messages):
-    with open(CHAT_HISTORY_FILE, "w", encoding="utf-8") as f:
+def save_chat_history(session_id, messages):
+    """특정 세션의 채팅 이력 저장"""
+    session_file = get_session_file(session_id)
+    with open(session_file, "w", encoding="utf-8") as f:
         json.dump(messages, f, ensure_ascii=False, indent=2)
 
+def create_new_session():
+    """새 세션 생성"""
+    return str(uuid.uuid4())
+
+# 기존 chat_history.json 파일 마이그레이션 (한 번만 실행)
+OLD_CHAT_HISTORY_FILE = "chat_history.json"
+if os.path.exists(OLD_CHAT_HISTORY_FILE) and not os.path.exists(os.path.join(CHAT_HISTORY_DIR, "migrated.txt")):
+    try:
+        with open(OLD_CHAT_HISTORY_FILE, "r", encoding="utf-8") as f:
+            old_messages = json.load(f)
+        if old_messages:  # 데이터가 있는 경우에만 마이그레이션
+            migration_session_id = create_new_session()
+            save_chat_history(migration_session_id, old_messages)
+            # 마이그레이션 완료 표시
+            with open(os.path.join(CHAT_HISTORY_DIR, "migrated.txt"), "w") as f:
+                f.write(f"Migrated from {OLD_CHAT_HISTORY_FILE} on {datetime.now()}")
+    except Exception as e:
+        print(f"마이그레이션 실패: {e}")
+
+# 세션 ID 초기화 (브라우저 탭마다 고유)
+if "session_id" not in st.session_state:
+    # 각 브라우저 탭/세션마다 고유한 세션 ID 생성
+    st.session_state.session_id = create_new_session()
+
+# 메시지 초기화
 if "messages" not in st.session_state:
-    st.session_state.messages = load_chat_history()
+    st.session_state.messages = load_chat_history(st.session_state.session_id)
 
 if "show_scheduler" not in st.session_state:
     st.session_state.show_scheduler = False
@@ -422,7 +460,7 @@ if user_input and isinstance(user_input, str) and user_input.strip():
             error_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             st.session_state.messages.append({"role":"assistant","content":"요청 처리 중 오류가 발생했습니다.","timestamp":error_time})
 
-    save_chat_history(st.session_state.messages)
+    save_chat_history(st.session_state.session_id, st.session_state.messages)
     st.rerun()
 
 # =========================

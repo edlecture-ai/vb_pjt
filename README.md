@@ -36,7 +36,7 @@ cd my_chatbot_project
 python -m venv venv
 
 # Windows
-venv\Scripts\activate
+source venv\Scripts\activate
 
 # macOS/Linux
 source venv/bin/activate
